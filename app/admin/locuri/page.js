@@ -95,7 +95,7 @@ export default function AdminLocuri() {
 
         {/* Header */}
         <div className="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-800">⚙️ Admin Panel</h1>
+          <h1 className="text-xl font-bold text-gray-800">⚙️ Panou administrare</h1>
           <button onClick={() => { localStorage.removeItem('user'); router.push('/') }}
             className="text-red-500 hover:text-red-700 font-medium text-sm">
             Ieși din cont
