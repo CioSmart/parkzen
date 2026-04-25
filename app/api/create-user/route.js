@@ -4,7 +4,8 @@ export async function POST(req) {
   // Inițializare ÎNĂUNTRUL funcției, nu afară
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { db: { schema: 'parkzen' } }
   )
 
   const { nume, email, password, tip } = await req.json()
