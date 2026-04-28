@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req) {
-  // Inițializare ÎNĂUNTRUL funcției, nu afară
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { db: { schema: 'parkzen' } }
+    { db: { schema: 'parkzen' } }
   )
 
-  const { nume, email, password, tip } = await req.json()
+  const { nume, email, password, tip, companie_id } = await req.json()
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
@@ -25,15 +24,12 @@ export async function POST(req) {
     nume,
     email,
     tip,
+    companie_id: companie_id || null,
     activ: true
   })
 
   if (error) {
     return Response.json({ error: error.message }, { status: 400 })
-  }
-
-  if (tip === 'admin') {
-    await supabaseAdmin.from('admin_users').insert({ user_id: authData.user.id })
   }
 
   return Response.json({ success: true })
