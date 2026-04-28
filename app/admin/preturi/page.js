@@ -278,4 +278,14 @@ export default function AdminPreturi() {
                 </div>
               ))}
               {preturi.length === 0 && (
-                <p
+                <p className="col-span-4 text-center text-gray-400 py-8">
+                  Niciun tarif definit încă
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
