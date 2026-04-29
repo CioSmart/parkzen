@@ -26,13 +26,14 @@ export default function LoginPage() {
       return
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('*, companii(nume)')
-      .eq('auth_id', authData.user.id)
-      .eq('activ', true)
-      .single()
+   const { data: profile, error: profileError } = await supabase
+  .from('users')
+  .select('*')
+  .eq('auth_id', authData.user.id)
+  .eq('activ', true)
+  .single()
 
+  
     if (profileError || !profile) {
       setError('Contul nu este activ sau nu există!')
       setLoading(false)
