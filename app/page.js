@@ -33,7 +33,11 @@ export default function LoginPage() {
   .eq('activ', true)
   .single()
 
-  
+  console.log('profile:', profile)
+console.log('profileError:', profileError)
+console.log('auth_id cautat:', authData.user.id)
+
+
     if (profileError || !profile) {
       setError('Contul nu este activ sau nu există!')
       setLoading(false)
