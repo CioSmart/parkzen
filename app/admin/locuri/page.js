@@ -5,15 +5,29 @@ import { supabase } from '../../../lib/supabase'
 
 export default function AdminLocuri() {
   const [user, setUser] = useState(null)
-  const [locuri, setLocuri] = useState([])
+  const [companii, setCompanii] = useState([])
   const [locatii, setLocatii] = useState([])
+  const [zone, setZone] = useState([])
+  const [locuri, setLocuri] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editLoc, setEditLoc] = useState(null)
-  const [form, setForm] = useState({ numar_loc: '', etaj: '0', zona: '', descriere: '', locatie_id: '' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+
+  const [filtruCompanie, setFiltruCompanie] = useState('')
   const [filtruLocatie, setFiltruLocatie] = useState('')
+  const [filtruZona, setFiltruZona] = useState('')
+
+  const [form, setForm] = useState({
+    numar_loc: '',
+    etaj: '0',
+    zona_id: '',
+    locatie_id: '',
+    companie_id: '',
+    descriere: ''
+  })
+
   const router = useRouter()
 
   useEffect(() => {
@@ -24,66 +38,98 @@ export default function AdminLocuri() {
       router.push('/dashboard'); return
     }
     setUser(parsed)
-    fetchDate(parsed)
+    fetchCompanii(parsed)
   }, [])
 
-  async function fetchDate(u) {
+  async function fetchCompanii(u) {
     setLoading(true)
-    const [{ data: locuriData }, { data: locatiiData }] = await Promise.all([
-      supabase
-        .from('locuri_parcare')
-        .select('*, locatii(nume)')
-        .eq('companie_id', u.companie_id)
-        .order('etaj')
-        .order('zona')
-        .order('numar_loc'),
-      supabase
-        .from('locatii')
+    if (u.tip === 'power_admin') {
+      const { data } = await supabase
+        .from('companii')
         .select('*')
-        .eq('companie_id', u.companie_id)
         .eq('activ', true)
         .order('nume')
-    ])
-    setLocuri(locuriData || [])
-    setLocatii(locatiiData || [])
+      setCompanii(data || [])
+    } else {
+      // Admin - fetch companiile lui
+      const { data } = await supabase
+        .from('user_companii')
+        .select('*, companii(*)')
+        .eq('user_id', u.id)
+        .eq('activ', true)
+      const companiiData = data?.map(uc => uc.companii).filter(Boolean) || []
+      setCompanii(companiiData)
+
+      // Daca are o singura companie, selecteaza automat
+      if (companiiData.length === 1) {
+        setFiltruCompanie(companiiData[0].id)
+        setForm(f => ({ ...f, companie_id: companiiData[0].id }))
+        await fetchLocatii(companiiData[0].id)
+      }
+    }
+    await fetchLocuri(u)
     setLoading(false)
   }
 
-  function deschideForm(l = null) {
-    if (l) {
-      setEditLoc(l)
-      setForm({
-        numar_loc: l.numar_loc,
-        etaj: String(l.etaj || 0),
-        zona: l.zona || '',
-        descriere: l.descriere || '',
-        locatie_id: l.locatie_id || ''
-      })
-    } else {
-      setEditLoc(null)
-      setForm({ numar_loc: '', etaj: '0', zona: '', descriere: '', locatie_id: locatii[0]?.id || '' })
+  async function fetchLocatii(companieId) {
+    const { data } = await supabase
+      .from('locatii')
+      .select('*')
+      .eq('companie_id', companieId)
+      .eq('activ', true)
+      .order('nume')
+    setLocatii(data || [])
+    setZone([])
+    setFiltruLocatie('')
+    setFiltruZona('')
+  }
+
+  async function fetchZone(locatieId) {
+    const { data } = await supabase
+      .from('zone')
+      .select('*')
+      .eq('locatie_id', locatieId)
+      .eq('activ', true)
+      .order('nume')
+    setZone(data || [])
+    setFiltruZona('')
+  }
+
+  async function fetchLocuri(u) {
+    let query = supabase
+      .from('locuri_parcare')
+      .select('*, locatii(nume), zone(nume), companii(nume)')
+      .order('etaj').order('numar_loc')
+
+    if (u.tip !== 'power_admin') {
+      query = query.eq('companie_id', u.companie_id)
     }
-    setShowForm(true)
-    setMsg('')
+
+    const { data } = await query
+    setLocuri(data || [])
   }
 
   async function salveaza() {
     setSaving(true)
     setMsg('')
-    if (!form.numar_loc || !form.locatie_id) {
-      setMsg('Numărul locului și locația sunt obligatorii!')
+
+    if (!form.numar_loc || !form.locatie_id || !form.zona_id) {
+      setMsg('Numărul locului, locația și zona sunt obligatorii!')
       setSaving(false)
       return
     }
+
     const payload = {
       numar_loc: form.numar_loc,
       etaj: parseInt(form.etaj) || 0,
-      zona: form.zona.toUpperCase() || null,
-      descriere: form.descriere || null,
+      zona_id: form.zona_id,
+      zona: zone.find(z => z.id === form.zona_id)?.nume || null,
       locatie_id: form.locatie_id,
-      companie_id: user.companie_id,
+      companie_id: form.companie_id,
+      descriere: form.descriere || null,
       activ: true
     }
+
     if (editLoc) {
       const { error } = await supabase
         .from('locuri_parcare')
@@ -98,25 +144,57 @@ export default function AdminLocuri() {
       if (error) { setMsg('Eroare: ' + error.message); setSaving(false); return }
       setMsg('✅ Loc adăugat!')
     }
-    fetchDate(user)
+
+    fetchLocuri(user)
     setSaving(false)
     setTimeout(() => { setShowForm(false); setMsg('') }, 1500)
   }
 
+  async function deschideForm(l = null) {
+    if (l) {
+      setEditLoc(l)
+      setForm({
+        numar_loc: l.numar_loc,
+        etaj: String(l.etaj || 0),
+        zona_id: l.zona_id || '',
+        locatie_id: l.locatie_id || '',
+        companie_id: l.companie_id || '',
+        descriere: l.descriere || ''
+      })
+      if (l.companie_id) await fetchLocatii(l.companie_id)
+      if (l.locatie_id) await fetchZone(l.locatie_id)
+    } else {
+      setEditLoc(null)
+      setForm({
+        numar_loc: '',
+        etaj: '0',
+        zona_id: '',
+        locatie_id: filtruLocatie || '',
+        companie_id: filtruCompanie || '',
+        descriere: ''
+      })
+    }
+    setShowForm(true)
+    setMsg('')
+  }
+
   async function toggleActiv(l) {
     await supabase.from('locuri_parcare').update({ activ: !l.activ }).eq('id', l.id)
-    fetchDate(user)
+    fetchLocuri(user)
   }
 
   async function sterge(l) {
     if (!confirm(`Ștergi locul ${l.numar_loc}?`)) return
     await supabase.from('locuri_parcare').delete().eq('id', l.id)
-    fetchDate(user)
+    fetchLocuri(user)
   }
 
-  const locuriFiltrate = filtruLocatie
-    ? locuri.filter(l => l.locatie_id === filtruLocatie)
-    : locuri
+  const locuriFiltrate = locuri.filter(l => {
+    if (filtruCompanie && l.companie_id !== filtruCompanie) return false
+    if (filtruLocatie && l.locatie_id !== filtruLocatie) return false
+    if (filtruZona && l.zona_id !== filtruZona) return false
+    return true
+  })
 
   if (!user) return null
 
@@ -128,7 +206,14 @@ export default function AdminLocuri() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-900">🅿️ ParkZen Admin</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{user.nume || user.email}</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {user.nume || user.email}
+              {user.companie_nume && (
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
+                  🏢 {user.companie_nume}
+                </span>
+              )}
+            </p>
           </div>
           <button
             onClick={() => { localStorage.removeItem('user'); router.push('/') }}
@@ -166,26 +251,44 @@ export default function AdminLocuri() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-800">🅿️ Locuri de parcare</h2>
-            <button
-              onClick={() => deschideForm()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700"
-            >
+            <button onClick={() => deschideForm()}
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700">
               + Adaugă
             </button>
           </div>
 
-          {/* Filtru locatie */}
-          <div className="mb-4">
-            <select
-              value={filtruLocatie}
-              onChange={e => setFiltruLocatie(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+          {/* Filtre */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            {companii.length > 1 && (
+              <select value={filtruCompanie}
+                onChange={async e => {
+                  setFiltruCompanie(e.target.value)
+                  if (e.target.value) await fetchLocatii(e.target.value)
+                  else { setLocatii([]); setZone([]) }
+                }}
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Toate companiile</option>
+                {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
+              </select>
+            )}
+            <select value={filtruLocatie}
+              onChange={async e => {
+                setFiltruLocatie(e.target.value)
+                if (e.target.value) await fetchZone(e.target.value)
+                else setZone([])
+              }}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Toate locațiile</option>
-              {locatii.map(l => (
-                <option key={l.id} value={l.id}>{l.nume}</option>
-              ))}
+              {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
             </select>
+            {zone.length > 0 && (
+              <select value={filtruZona}
+                onChange={e => setFiltruZona(e.target.value)}
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Toate zonele</option>
+                {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
+              </select>
+            )}
           </div>
 
           {/* Form */}
@@ -195,82 +298,95 @@ export default function AdminLocuri() {
                 {editLoc ? '✏️ Editează loc' : '➕ Loc nou'}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+
+                {/* Companie */}
+                {companii.length > 1 && (
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Companie *</label>
+                    <select value={form.companie_id}
+                      onChange={async e => {
+                        setForm({ ...form, companie_id: e.target.value, locatie_id: '', zona_id: '' })
+                        if (e.target.value) await fetchLocatii(e.target.value)
+                      }}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">— Alege companie —</option>
+                      {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Locatie */}
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Locație *</label>
-                  <select
-                    value={form.locatie_id}
-                    onChange={e => setForm({ ...form, locatie_id: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={form.locatie_id}
+                    onChange={async e => {
+                      setForm({ ...form, locatie_id: e.target.value, zona_id: '' })
+                      if (e.target.value) await fetchZone(e.target.value)
+                    }}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">— Alege locație —</option>
-                    {locatii.map(l => (
-                      <option key={l.id} value={l.id}>{l.nume}</option>
-                    ))}
+                    {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
                   </select>
                 </div>
+
+                {/* Zona */}
+                <div>
+                  <label className="text-xs text-gray-500 font-medium">Zonă *</label>
+                  <select value={form.zona_id}
+                    onChange={e => setForm({ ...form, zona_id: e.target.value })}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">— Alege zonă —</option>
+                    {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
+                  </select>
+                </div>
+
+                {/* Numar loc */}
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Număr loc *</label>
-                  <input
-                    value={form.numar_loc}
+                  <input value={form.numar_loc}
                     onChange={e => setForm({ ...form, numar_loc: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ex: A1, P-01"
-                  />
+                    placeholder="ex: A1, P-01" />
                 </div>
+
+                {/* Etaj */}
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Etaj</label>
-                  <input
-                    type="number"
-                    value={form.etaj}
+                  <input type="number" value={form.etaj}
                     onChange={e => setForm({ ...form, etaj: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0"
-                  />
+                    placeholder="0" />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">Zonă</label>
-                  <input
-                    value={form.zona}
-                    onChange={e => setForm({ ...form, zona: e.target.value.toUpperCase() })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ex: A, B, C"
-                    maxLength={5}
-                  />
-                </div>
+
+                {/* Descriere */}
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Descriere</label>
-                  <input
-                    value={form.descriere}
+                  <input value={form.descriere}
                     onChange={e => setForm({ ...form, descriere: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ex: lângă lift"
-                  />
+                    placeholder="ex: lângă lift" />
                 </div>
               </div>
+
               {msg && (
                 <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
                   {msg}
                 </p>
               )}
               <div className="flex gap-2 mt-3">
-                <button
-                  onClick={salveaza}
-                  disabled={saving}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button onClick={salveaza} disabled={saving}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 disabled:opacity-50">
                   {saving ? 'Se salvează...' : 'Salvează'}
                 </button>
-                <button
-                  onClick={() => setShowForm(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300"
-                >
+                <button onClick={() => setShowForm(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300">
                   Anulează
                 </button>
               </div>
             </div>
           )}
 
-          {/* Lista locuri grupate pe etaj/zona */}
+          {/* Tabel locuri */}
           {loading ? (
             <p className="text-gray-400 text-sm">Se încarcă...</p>
           ) : (
@@ -280,8 +396,8 @@ export default function AdminLocuri() {
                   <tr className="bg-gray-50 text-gray-500 text-left">
                     <th className="px-3 py-2 rounded-l-lg">Loc</th>
                     <th className="px-3 py-2">Locație</th>
-                    <th className="px-3 py-2">Etaj</th>
                     <th className="px-3 py-2">Zonă</th>
+                    <th className="px-3 py-2">Etaj</th>
                     <th className="px-3 py-2">Descriere</th>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2 rounded-r-lg">Acțiuni</th>
@@ -292,8 +408,14 @@ export default function AdminLocuri() {
                     <tr key={l.id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="px-3 py-3 font-medium text-gray-800">🅿️ {l.numar_loc}</td>
                       <td className="px-3 py-3 text-gray-500">{l.locatii?.nume || '—'}</td>
+                      <td className="px-3 py-3">
+                        {l.zone?.nume ? (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                            {l.zone.nume}
+                          </span>
+                        ) : '—'}
+                      </td>
                       <td className="px-3 py-3 text-gray-500">Etaj {l.etaj}</td>
-                      <td className="px-3 py-3 text-gray-500">{l.zona || '—'}</td>
                       <td className="px-3 py-3 text-gray-500">{l.descriere || '—'}</td>
                       <td className="px-3 py-3">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -306,7 +428,7 @@ export default function AdminLocuri() {
                         <div className="flex gap-2">
                           <button onClick={() => deschideForm(l)}
                             className="text-blue-600 hover:text-blue-800 text-xs font-medium">
-                            ✏️ Edit
+                            ✏️
                           </button>
                           <button onClick={() => toggleActiv(l)}
                             className="text-yellow-600 hover:text-yellow-800 text-xs font-medium">
@@ -323,7 +445,7 @@ export default function AdminLocuri() {
                 </tbody>
               </table>
               {locuriFiltrate.length === 0 && (
-                <p className="text-center text-gray-400 py-8">Niciun loc de parcare definit</p>
+                <p className="text-center text-gray-400 py-8">Niciun loc găsit</p>
               )}
             </div>
           )}
