@@ -5,13 +5,15 @@ import { supabase } from '../../../lib/supabase'
 
 export default function AdminLocatii() {
   const [user, setUser] = useState(null)
+  const [companii, setCompanii] = useState([])
+  const [companieSelectata, setCompanieSelectata] = useState('')
   const [locatii, setLocatii] = useState([])
   const [zone, setZone] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editLocatie, setEditLocatie] = useState(null)
   const [showZone, setShowZone] = useState(null)
-  const [formLocatie, setFormLocatie] = useState({ nume: '', adresa: '' })
+  const [formLocatie, setFormLocatie] = useState({ nume: '', adresa: '', companie_id: '' })
   const [formZona, setFormZona] = useState({ nume: '', descriere: '' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -25,15 +27,46 @@ export default function AdminLocatii() {
       router.push('/dashboard'); return
     }
     setUser(parsed)
-    fetchLocatii(parsed)
+    fetchCompanii(parsed)
   }, [])
 
-  async function fetchLocatii(u) {
+  async function fetchCompanii(u) {
+    setLoading(true)
+    let companiiData = []
+
+    if (u.tip === 'power_admin') {
+      const { data } = await supabase
+        .from('companii')
+        .select('*')
+        .eq('activ', true)
+        .order('nume')
+      companiiData = data || []
+    } else {
+      const { data } = await supabase
+        .from('user_companii')
+        .select('*, companii(*)')
+        .eq('user_id', u.id)
+        .eq('activ', true)
+      companiiData = data?.map(uc => uc.companii).filter(Boolean) || []
+    }
+
+    setCompanii(companiiData)
+
+    if (companiiData.length === 1) {
+      setCompanieSelectata(companiiData[0].id)
+      await fetchLocatii(companiiData[0].id)
+    }
+
+    setLoading(false)
+  }
+
+  async function fetchLocatii(companieId) {
+    if (!companieId) { setLocatii([]); return }
     setLoading(true)
     const { data } = await supabase
       .from('locatii')
       .select('*, zone(*)')
-      .eq('companie_id', u.companie_id)
+      .eq('companie_id', companieId)
       .order('nume')
     setLocatii(data || [])
     setLoading(false)
@@ -51,10 +84,18 @@ export default function AdminLocatii() {
   function deschideForm(l = null) {
     if (l) {
       setEditLocatie(l)
-      setFormLocatie({ nume: l.nume, adresa: l.adresa || '' })
+      setFormLocatie({
+        nume: l.nume,
+        adresa: l.adresa || '',
+        companie_id: l.companie_id || companieSelectata
+      })
     } else {
       setEditLocatie(null)
-      setFormLocatie({ nume: '', adresa: '' })
+      setFormLocatie({
+        nume: '',
+        adresa: '',
+        companie_id: companieSelectata
+      })
     }
     setShowForm(true)
     setShowZone(null)
@@ -71,15 +112,27 @@ export default function AdminLocatii() {
   async function salveazaLocatie() {
     setSaving(true)
     setMsg('')
+
     if (!formLocatie.nume) {
       setMsg('Numele locației este obligatoriu!')
       setSaving(false)
       return
     }
+
+    if (!formLocatie.companie_id) {
+      setMsg('Selectează o companie!')
+      setSaving(false)
+      return
+    }
+
     if (editLocatie) {
       const { error } = await supabase
         .from('locatii')
-        .update({ nume: formLocatie.nume, adresa: formLocatie.adresa })
+        .update({
+          nume: formLocatie.nume,
+          adresa: formLocatie.adresa,
+          companie_id: formLocatie.companie_id
+        })
         .eq('id', editLocatie.id)
       if (error) { setMsg('Eroare: ' + error.message); setSaving(false); return }
       setMsg('✅ Locație actualizată!')
@@ -89,13 +142,15 @@ export default function AdminLocatii() {
         .insert({
           nume: formLocatie.nume,
           adresa: formLocatie.adresa,
-          companie_id: user.companie_id,
+          companie_id: formLocatie.companie_id,
           activ: true
         })
       if (error) { setMsg('Eroare: ' + error.message); setSaving(false); return }
       setMsg('✅ Locație adăugată!')
     }
-    fetchLocatii(user)
+
+    fetchLocatii(formLocatie.companie_id)
+    setCompanieSelectata(formLocatie.companie_id)
     setSaving(false)
     setTimeout(() => { setShowForm(false); setMsg('') }, 1500)
   }
@@ -109,7 +164,7 @@ export default function AdminLocatii() {
       .from('zone')
       .insert({
         locatie_id: showZone.id,
-        companie_id: user.companie_id,
+        companie_id: showZone.companie_id,
         nume: formZona.nume.toUpperCase(),
         descriere: formZona.descriere || null,
         activ: true
@@ -117,7 +172,7 @@ export default function AdminLocatii() {
     if (error) { setMsg('Eroare: ' + error.message); return }
     setFormZona({ nume: '', descriere: '' })
     await fetchZone(showZone.id)
-    fetchLocatii(user)
+    fetchLocatii(companieSelectata)
     setMsg('✅ Zonă adăugată!')
   }
 
@@ -125,12 +180,12 @@ export default function AdminLocatii() {
     if (!confirm('Ștergi această zonă?')) return
     await supabase.from('zone').delete().eq('id', zonaId)
     await fetchZone(showZone.id)
-    fetchLocatii(user)
+    fetchLocatii(companieSelectata)
   }
 
   async function toggleActivLocatie(l) {
     await supabase.from('locatii').update({ activ: !l.activ }).eq('id', l.id)
-    fetchLocatii(user)
+    fetchLocatii(companieSelectata)
   }
 
   if (!user) return null
@@ -184,180 +239,224 @@ export default function AdminLocatii() {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold text-gray-800">📍 Locații & Zone</h2>
-            <button
-              onClick={() => deschideForm()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700"
-            >
-              + Adaugă locație
-            </button>
-          </div>
-
-          {/* Form locatie */}
-          {showForm && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
-              <h3 className="font-semibold text-gray-700 mb-3">
-                {editLocatie ? '✏️ Editează locație' : '➕ Locație nouă'}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">Nume locație *</label>
-                  <input
-                    value={formLocatie.nume}
-                    onChange={e => setFormLocatie({ ...formLocatie, nume: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ex: Sediu Central"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 font-medium">Adresă</label>
-                  <input
-                    value={formLocatie.adresa}
-                    onChange={e => setFormLocatie({ ...formLocatie, adresa: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ex: Str. Exemplu nr. 1"
-                  />
-                </div>
-              </div>
-              {msg && (
-                <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
-                  {msg}
-                </p>
-              )}
-              <div className="flex gap-2 mt-3">
-                <button onClick={salveazaLocatie} disabled={saving}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 disabled:opacity-50">
-                  {saving ? 'Se salvează...' : 'Salvează'}
+        {/* Selector companie */}
+        {companii.length > 1 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+            <label className="text-xs text-gray-500 font-medium block mb-2">
+              🏢 Selectează compania
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {companii.map(c => (
+                <button key={c.id}
+                  onClick={async () => {
+                    setCompanieSelectata(c.id)
+                    setShowForm(false)
+                    setShowZone(null)
+                    await fetchLocatii(c.id)
+                  }}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition ${
+                    companieSelectata === c.id
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                  }`}>
+                  🏢 {c.nume}
                 </button>
-                <button onClick={() => setShowForm(false)}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300">
-                  Anulează
-                </button>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Panel zone */}
-          {showZone && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
-              <h3 className="font-semibold text-indigo-800 mb-3">
-                🗂️ Zone pentru {showZone.nume}
-              </h3>
-
-              {/* Zone existente */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {zone.map(z => (
-                  <div key={z.id}
-                    className="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-3 py-2">
-                    <span className="font-medium text-gray-800 text-sm">
-                      {z.nume}
-                    </span>
-                    {z.descriere && (
-                      <span className="text-xs text-gray-400">{z.descriere}</span>
-                    )}
-                    <button onClick={() => stergeZona(z.id)}
-                      className="text-red-400 hover:text-red-600 text-xs ml-1">
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                {zone.length === 0 && (
-                  <p className="text-sm text-gray-400">Nicio zonă definită încă</p>
-                )}
-              </div>
-
-              {/* Adauga zona */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <input
-                  value={formZona.nume}
-                  onChange={e => setFormZona({ ...formZona, nume: e.target.value.toUpperCase() })}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Nume zonă (ex: A, VIP)"
-                  maxLength={20}
-                />
-                <input
-                  value={formZona.descriere}
-                  onChange={e => setFormZona({ ...formZona, descriere: e.target.value })}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Descriere (opțional)"
-                />
-                <button onClick={adaugaZona}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
-                  + Adaugă zonă
-                </button>
-              </div>
-
-              {msg && (
-                <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
-                  {msg}
-                </p>
-              )}
-
-              <button onClick={() => { setShowZone(null); setMsg('') }}
-                className="mt-3 bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300">
-                Închide
+        {/* Content */}
+        {!companieSelectata ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="text-4xl mb-2">🏢</div>
+            <p className="text-gray-400">Selectează o companie pentru a vedea locațiile</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-800">
+                📍 Locații — {companii.find(c => c.id === companieSelectata)?.nume}
+              </h2>
+              <button onClick={() => deschideForm()}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700">
+                + Adaugă locație
               </button>
             </div>
-          )}
 
-          {/* Lista locatii */}
-          {loading ? (
-            <p className="text-gray-400 text-sm">Se încarcă...</p>
-          ) : (
-            <div className="space-y-3">
-              {locatii.map(l => (
-                <div key={l.id}
-                  className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-gray-800">📍 {l.nume}</p>
-                      {l.adresa && (
-                        <p className="text-xs text-gray-400 mt-0.5">{l.adresa}</p>
-                      )}
-                      {/* Zone */}
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {l.zone?.map(z => (
-                          <span key={z.id}
-                            className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
-                            {z.nume}
-                          </span>
-                        ))}
-                        {(!l.zone || l.zone.length === 0) && (
-                          <span className="text-xs text-gray-400">Nicio zonă definită</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        l.activ ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {l.activ ? 'Activă' : 'Inactivă'}
-                      </span>
-                      <button onClick={() => deschideZone(l)}
-                        className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
-                        🗂️ Zone
-                      </button>
-                      <button onClick={() => deschideForm(l)}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium">
-                        ✏️ Edit
-                      </button>
-                      <button onClick={() => toggleActivLocatie(l)}
-                        className="text-yellow-600 hover:text-yellow-800 text-xs font-medium">
-                        {l.activ ? '🔴' : '🟢'}
-                      </button>
-                    </div>
+            {/* Form locatie */}
+            {showForm && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                <h3 className="font-semibold text-gray-700 mb-3">
+                  {editLocatie ? '✏️ Editează locație' : '➕ Locație nouă'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Companie */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Companie *</label>
+                    <select
+                      value={formLocatie.companie_id}
+                      onChange={e => setFormLocatie({ ...formLocatie, companie_id: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">— Alege companie —</option>
+                      {companii.map(c => (
+                        <option key={c.id} value={c.id}>{c.nume}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Nume */}
+                  <div>
+                    <label className="text-xs text-gray-500 font-medium">Nume locație *</label>
+                    <input
+                      value={formLocatie.nume}
+                      onChange={e => setFormLocatie({ ...formLocatie, nume: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="ex: Sediu Central"
+                    />
+                  </div>
+
+                  {/* Adresa */}
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-gray-500 font-medium">Adresă</label>
+                    <input
+                      value={formLocatie.adresa}
+                      onChange={e => setFormLocatie({ ...formLocatie, adresa: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="ex: Str. Exemplu nr. 1"
+                    />
                   </div>
                 </div>
-              ))}
-              {locatii.length === 0 && (
-                <p className="text-center text-gray-400 py-8">Nicio locație adăugată încă</p>
-              )}
-            </div>
-          )}
-        </div>
+
+                {msg && (
+                  <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                    {msg}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-3">
+                  <button onClick={salveazaLocatie} disabled={saving}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 disabled:opacity-50">
+                    {saving ? 'Se salvează...' : 'Salvează'}
+                  </button>
+                  <button onClick={() => setShowForm(false)}
+                    className="bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300">
+                    Anulează
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Panel zone */}
+            {showZone && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
+                <h3 className="font-semibold text-indigo-800 mb-3">
+                  🗂️ Zone pentru {showZone.nume}
+                </h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {zone.map(z => (
+                    <div key={z.id}
+                      className="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-3 py-2">
+                      <span className="font-medium text-gray-800 text-sm">{z.nume}</span>
+                      {z.descriere && (
+                        <span className="text-xs text-gray-400">{z.descriere}</span>
+                      )}
+                      <button onClick={() => stergeZona(z.id)}
+                        className="text-red-400 hover:text-red-600 text-xs ml-1">✕</button>
+                    </div>
+                  ))}
+                  {zone.length === 0 && (
+                    <p className="text-sm text-gray-400">Nicio zonă definită încă</p>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <input
+                    value={formZona.nume}
+                    onChange={e => setFormZona({ ...formZona, nume: e.target.value.toUpperCase() })}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Nume zonă (ex: A, VIP)"
+                    maxLength={20}
+                  />
+                  <input
+                    value={formZona.descriere}
+                    onChange={e => setFormZona({ ...formZona, descriere: e.target.value })}
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Descriere (opțional)"
+                  />
+                  <button onClick={adaugaZona}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-indigo-700">
+                    + Adaugă zonă
+                  </button>
+                </div>
+                {msg && (
+                  <p className={`mt-2 text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>
+                    {msg}
+                  </p>
+                )}
+                <button onClick={() => { setShowZone(null); setMsg('') }}
+                  className="mt-3 bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm hover:bg-gray-300">
+                  Închide
+                </button>
+              </div>
+            )}
+
+            {/* Lista locatii */}
+            {loading ? (
+              <p className="text-gray-400 text-sm">Se încarcă...</p>
+            ) : (
+              <div className="space-y-3">
+                {locatii.map(l => (
+                  <div key={l.id}
+                    className="border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-800">📍 {l.nume}</p>
+                        {l.adresa && (
+                          <p className="text-xs text-gray-400 mt-0.5">{l.adresa}</p>
+                        )}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {l.zone?.map(z => (
+                            <span key={z.id}
+                              className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                              {z.nume}
+                            </span>
+                          ))}
+                          {(!l.zone || l.zone.length === 0) && (
+                            <span className="text-xs text-gray-400">Nicio zonă definită</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          l.activ ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {l.activ ? 'Activă' : 'Inactivă'}
+                        </span>
+                        <button onClick={() => deschideZone(l)}
+                          className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">
+                          🗂️ Zone
+                        </button>
+                        <button onClick={() => deschideForm(l)}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                          ✏️ Edit
+                        </button>
+                        <button onClick={() => toggleActivLocatie(l)}
+                          className="text-yellow-600 hover:text-yellow-800 text-xs font-medium">
+                          {l.activ ? '🔴' : '🟢'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {locatii.length === 0 && (
+                  <p className="text-center text-gray-400 py-8">
+                    Nicio locație adăugată încă
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
