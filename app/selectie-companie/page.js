@@ -59,28 +59,30 @@ export default function LoginPage() {
       return
     }
 
-    if (userCompanii.length === 1) {
-      // O singura companie - intra direct
-      const uc = userCompanii[0]
-      const userComplet = {
-        ...profile,
-        companie_id: uc.companie_id,
-        tip_companie: uc.tip,
-        companie_nume: uc.companii.nume
-      }
-      localStorage.setItem('user', JSON.stringify(userComplet))
-
-      if (uc.tip === 'admin') {
-        router.push('/admin/locatii')
-      } else {
-        router.push('/dashboard')
-      }
+if (userCompanii.length === 1) {
+    const uc = userCompanii[0]
+    localStorage.setItem('user', JSON.stringify({
+      ...profile,
+      companie_id: uc.companie_id,
+      tip_companie: uc.tip,
+      companie_nume: uc.companii?.nume || null
+    }))
+    setLoading(false)
+    if (uc.tip === 'admin') {
+      router.push('/admin/locatii')
     } else {
-      // Mai multe companii - selector
-      localStorage.setItem('user', JSON.stringify(profile))
-      localStorage.setItem('user_companii', JSON.stringify(userCompanii))
-      router.push('/selectie-companie')
+      router.push('/dashboard')
     }
+  } else {
+    localStorage.setItem('user', JSON.stringify({
+      ...profile,
+      companie_id: null,
+      tip_companie: null,
+      companie_nume: null
+    }))
+    localStorage.setItem('user_companii', JSON.stringify(userCompanii))
+    setLoading(false)
+    router.push('/selectie-companie')
   }
 
   return (
