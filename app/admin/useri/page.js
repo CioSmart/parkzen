@@ -290,7 +290,7 @@ const { data } = await supabase
         </div>
 
         {/* Selector companie */}
-        {companii.length > 1 && (
+        {user.tip === 'power_admin' && companii.length > 1 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
             <label className="text-xs text-gray-500 font-medium block mb-2">
               🏢 Selectează compania

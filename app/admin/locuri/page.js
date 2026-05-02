@@ -272,7 +272,7 @@ export default function AdminLocuri() {
 
           {/* Filtre */}
           <div className="flex flex-wrap gap-3 mb-4">
-            {companii.length > 1 && (
+                {user.tip === 'power_admin' && companii.length > 1 && (
               <select value={filtruCompanie}
                 onChange={async e => {
                   setFiltruCompanie(e.target.value)
@@ -313,7 +313,7 @@ export default function AdminLocuri() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 
                 {/* Companie */}
-                {companii.length > 1 && (
+                  {user.tip === 'power_admin' && companii.length > 1 && (
                   <div>
                     <label className="text-xs text-gray-500 font-medium">Companie *</label>
                     <select value={form.companie_id}

@@ -292,7 +292,7 @@ async function getCompanieIds(u) {
 
           {/* Filtre */}
           <div className="flex flex-wrap gap-3 mb-4">
-            {companii.length > 1 && (
+            {user.tip === 'power_admin' && companii.length > 1 && (
               <select value={filtruCompanie}
                 onChange={async e => {
                   setFiltruCompanie(e.target.value)
