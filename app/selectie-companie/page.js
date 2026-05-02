@@ -1,136 +1,67 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../lib/supabase'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+export default function SelectieCompanie() {
+  const [user, setUser] = useState(null)
+  const [companii, setCompanii] = useState([])
   const router = useRouter()
 
-  async function handleLogin(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  useEffect(() => {
+    const u = localStorage.getItem('user')
+    const uc = localStorage.getItem('user_companii')
+    if (!u || !uc) { router.push('/'); return }
+    setUser(JSON.parse(u))
+    setCompanii(JSON.parse(uc))
+  }, [])
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (authError) {
-      setError('Email sau parolă incorectă!')
-      setLoading(false)
-      return
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', authData.user.id)
-      .eq('activ', true)
-      .single()
-
-    if (profileError || !profile) {
-      setError('Contul nu este activ sau nu există!')
-      setLoading(false)
-      return
-    }
-
-    // Power admin - acces total
-    if (profile.tip === 'power_admin') {
-      localStorage.setItem('user', JSON.stringify(profile))
-      router.push('/power-admin/companii')
-      return
-    }
-
-    // Fetch companii alocate userului
-    const { data: userCompanii, error: companiiError } = await supabase
-      .from('user_companii')
-      .select('*, companii(*)')
-      .eq('user_id', profile.id)
-      .eq('activ', true)
-
-    if (companiiError || !userCompanii || userCompanii.length === 0) {
-      setError('Nu ești alocat niciunei companii! Contactează administratorul.')
-      setLoading(false)
-      return
-    }
-
-if (userCompanii.length === 1) {
-    const uc = userCompanii[0]
-    localStorage.setItem('user', JSON.stringify({
-      ...profile,
+  function selecteaza(uc) {
+    const userActualizat = {
+      ...user,
       companie_id: uc.companie_id,
       tip_companie: uc.tip,
       companie_nume: uc.companii?.nume || null
-    }))
-    setLoading(false)
+    }
+    localStorage.setItem('user', JSON.stringify(userActualizat))
+
     if (uc.tip === 'admin') {
       router.push('/admin/locatii')
     } else {
       router.push('/dashboard')
     }
-  } else {
-    localStorage.setItem('user', JSON.stringify({
-      ...profile,
-      companie_id: null,
-      tip_companie: null,
-      companie_nume: null
-    }))
-    localStorage.setItem('user_companii', JSON.stringify(userCompanii))
-    setLoading(false)
-    router.push('/selectie-companie')
   }
+
+  if (!user) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-8">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🅿️</div>
-          <h1 className="text-3xl font-bold text-gray-900">ParkZen</h1>
-          <p className="text-gray-500 mt-1">Sistem inteligent de parcare</p>
+          <h1 className="text-2xl font-bold text-gray-900">Selectează compania</h1>
+          <p className="text-gray-500 mt-1">Bun venit, {user.nume || user.email}</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded-xl mb-4 text-sm border border-red-100">
-            {error}
-          </div>
-        )}
+        <div className="space-y-3">
+          {companii.map(uc => (
+            <button key={uc.id}
+              onClick={() => selecteaza(uc)}
+              className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition text-left">
+              <div className="font-semibold text-gray-800">🏢 {uc.companii?.nume}</div>
+              <div className="text-sm text-gray-500 mt-0.5">
+                Rol: <span className={`font-medium ${
+                  uc.tip === 'admin' ? 'text-orange-600' : 'text-blue-600'
+                }`}>{uc.tip}</span>
+              </div>
+            </button>
+          ))}
+        </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@exemplu.com"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition font-medium disabled:opacity-50 mt-2"
-          >
-            {loading ? 'Se verifică...' : 'Intră în cont'}
-          </button>
-        </form>
+        <button
+          onClick={() => { localStorage.removeItem('user'); localStorage.removeItem('user_companii'); router.push('/') }}
+          className="w-full mt-4 text-red-500 hover:text-red-700 text-sm font-medium">
+          ← Înapoi la login
+        </button>
       </div>
     </div>
   )
