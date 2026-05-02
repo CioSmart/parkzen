@@ -101,9 +101,22 @@ export default function AdminLocuri() {
       .select('*, locatii(nume), zone(nume), companii(nume)')
       .order('etaj').order('numar_loc')
 
-    if (u.tip !== 'power_admin') {
-      query = query.eq('companie_id', u.companie_id)
+  if (u.tip !== 'power_admin') {
+  const companieId = u.companie_id && u.companie_id !== 'null' ? u.companie_id : null
+  if (companieId) {
+    query = query.eq('companie_id', companieId)
+  } else {
+    const { data: uc } = await supabase
+      .from('user_companii')
+      .select('companie_id')
+      .eq('user_id', u.id)
+      .eq('activ', true)
+    const ids = uc?.map(x => x.companie_id).filter(Boolean) || []
+    if (ids.length > 0) {
+      query = query.in('companie_id', ids)
     }
+  }
+}
 
     const { data } = await query
     setLocuri(data || [])

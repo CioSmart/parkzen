@@ -53,6 +53,19 @@ export default function AdminPreturi() {
     fetchCompanii(parsed)
   }, [])
 
+async function getCompanieIds(u) {
+  const companieId = u.companie_id && u.companie_id !== 'null' ? u.companie_id : null
+  if (companieId) return [companieId]
+  
+  const { data } = await supabase
+    .from('user_companii')
+    .select('companie_id')
+    .eq('user_id', u.id)
+    .eq('activ', true)
+  return data?.map(x => x.companie_id).filter(Boolean) || []
+}
+
+
   async function fetchCompanii(u) {
     setLoading(true)
     if (u.tip === 'power_admin') {
@@ -108,9 +121,13 @@ export default function AdminPreturi() {
       .order('durata_minute')
 
     if (u.tip !== 'power_admin') {
-      query = query.eq('companie_id', u.companie_id)
+    const ids = await getCompanieIds(u)
+    if (ids.length === 1) {
+      query = query.eq('companie_id', ids[0])
+    } else if (ids.length > 1) {
+      query = query.in('companie_id', ids)
     }
-
+  }
     const { data } = await query
     setPreturi(data || [])
   }
@@ -131,7 +148,7 @@ export default function AdminPreturi() {
     }
 
     const payload = {
-      companie_id: form.companie_id,
+      companie_id: form.companie_id && form.companie_id !== 'null' ? form.companie_id : null,
       locatie_id: form.locatie_id,
       zona_id: form.zona_id,
       nume: form.nume,

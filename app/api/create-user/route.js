@@ -19,18 +19,34 @@ export async function POST(req) {
     return Response.json({ error: authError.message }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin.from('users').insert({
-    auth_id: authData.user.id,
-    nume,
-    email,
-    tip,
-    companie_id: companie_id || null,
-    activ: true
-  })
+  // Inserare user FARA companie_id
+  const { data: newUser, error } = await supabaseAdmin
+    .from('users')
+    .insert({
+      auth_id: authData.user.id,
+      nume,
+      email,
+      tip: 'normal',
+      activ: true
+    })
+    .select()
+    .single()
 
   if (error) {
     return Response.json({ error: error.message }, { status: 400 })
   }
 
-  return Response.json({ success: true })
+  // Daca vine cu companie_id, aloca in user_companii
+  if (companie_id) {
+    await supabaseAdmin
+      .from('user_companii')
+      .insert({
+        user_id: newUser.id,
+        companie_id,
+        tip: tip || 'normal',
+        activ: true
+      })
+  }
+
+  return Response.json({ success: true, user: newUser })
 }

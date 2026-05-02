@@ -11,49 +11,83 @@ export default function LoginPage() {
   const router = useRouter()
 
   async function handleLogin(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
 
-    if (authError) {
-      setError('Email sau parolă incorectă!')
-      setLoading(false)
-      return
-    }
+  if (authError) {
+    setError('Email sau parolă incorectă!')
+    setLoading(false)
+    return
+  }
 
-   const { data: profile, error: profileError } = await supabase
-  .from('users')
-  .select('*')
-  .eq('auth_id', authData.user.id)
-  .eq('activ', true)
-  .single()
+  const { data: profile, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('auth_id', authData.user.id)
+    .eq('activ', true)
+    .single()
 
-  console.log('profile:', profile)
-console.log('profileError:', profileError)
-console.log('auth_id cautat:', authData.user.id)
+  if (profileError || !profile) {
+    setError('Contul nu este activ sau nu există!')
+    setLoading(false)
+    return
+  }
 
+  // Power admin - acces total fara companie
+  if (profile.tip === 'power_admin') {
+    localStorage.setItem('user', JSON.stringify({
+      ...profile,
+      companie_id: null,
+      tip_companie: null,
+      companie_nume: null
+    }))
+    router.push('/power-admin/companii')
+    return
+  }
 
-    if (profileError || !profile) {
-      setError('Contul nu este activ sau nu există!')
-      setLoading(false)
-      return
-    }
+  // Fetch companii alocate din user_companii
+  const { data: userCompanii, error: companiiError } = await supabase
+    .from('user_companii')
+    .select('*, companii(*)')
+    .eq('user_id', profile.id)
+    .eq('activ', true)
 
-    localStorage.setItem('user', JSON.stringify(profile))
+  if (companiiError || !userCompanii || userCompanii.length === 0) {
+    setError('Nu ești alocat niciunei companii! Contactează administratorul.')
+    setLoading(false)
+    return
+  }
 
-    if (profile.tip === 'power_admin') {
-      router.push('/power-admin/companii')
-    } else if (profile.tip === 'admin') {
+  if (userCompanii.length === 1) {
+    const uc = userCompanii[0]
+    localStorage.setItem('user', JSON.stringify({
+      ...profile,
+      companie_id: uc.companie_id,
+      tip_companie: uc.tip,
+      companie_nume: uc.companii?.nume || null
+    }))
+    if (uc.tip === 'admin') {
       router.push('/admin/locatii')
     } else {
       router.push('/dashboard')
     }
+  } else {
+    localStorage.setItem('user', JSON.stringify({
+      ...profile,
+      companie_id: null,
+      tip_companie: null,
+      companie_nume: null
+    }))
+    localStorage.setItem('user_companii', JSON.stringify(userCompanii))
+    router.push('/selectie-companie')
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -78,7 +112,7 @@ console.log('auth_id cautat:', authData.user.id)
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@exemplu.com"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900"
               required
             />
           </div>
@@ -89,7 +123,7 @@ console.log('auth_id cautat:', authData.user.id)
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900"
               required
             />
           </div>

@@ -30,6 +30,18 @@ export default function AdminUseri() {
     fetchCompanii(parsed)
   }, [])
 
+  async function getCompanieIds(u) {
+  const companieId = u.companie_id && u.companie_id !== 'null' ? u.companie_id : null
+  if (companieId) return [companieId]
+  
+  const { data } = await supabase
+    .from('user_companii')
+    .select('companie_id')
+    .eq('user_id', u.id)
+    .eq('activ', true)
+  return data?.map(x => x.companie_id).filter(Boolean) || []
+}
+
   async function fetchCompanii(u) {
     setLoading(true)
     let companiiData = []
@@ -63,24 +75,28 @@ export default function AdminUseri() {
 
   async function fetchUseri(companieId) {
     if (!companieId) { setUseri([]); return }
-    const { data } = await supabase
-      .from('user_companii')
-      .select('*, users(*)')
-      .eq('companie_id', companieId)
-      .order('created_at')
+   const id = companieId && companieId !== 'null' ? companieId : null
+if (!id) { setUseri([]); return }
+const { data } = await supabase
+  .from('user_companii')
+  .select('*, users(*)')
+  .eq('companie_id', id)
+  .order('created_at')
     setUseri(data || [])
   }
 
-  async function fetchLocatii(companieId) {
-    if (!companieId) { setLocatii([]); return }
-    const { data } = await supabase
-      .from('locatii')
-      .select('*')
-      .eq('companie_id', companieId)
-      .eq('activ', true)
-      .order('nume')
-    setLocatii(data || [])
-  }
+ async function fetchLocatii(companieId) {
+  if (!companieId) { setLocatii([]); return }
+  const id = companieId && companieId !== 'null' ? companieId : null
+  if (!id) { setLocatii([]); return }
+  const { data } = await supabase
+    .from('locatii')
+    .select('*')
+    .eq('companie_id', id)
+    .eq('activ', true)
+    .order('nume')
+  setLocatii(data || [])
+}
 
   async function selecteazaCompanie(companieId) {
     setCompanieSelectata(companieId)

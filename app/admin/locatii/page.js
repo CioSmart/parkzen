@@ -30,6 +30,20 @@ export default function AdminLocatii() {
     fetchCompanii(parsed)
   }, [])
 
+async function getCompanieIds(u) {
+  const companieId = u.companie_id && u.companie_id !== 'null' ? u.companie_id : null
+  if (companieId) return [companieId]
+  
+  const { data } = await supabase
+    .from('user_companii')
+    .select('companie_id')
+    .eq('user_id', u.id)
+    .eq('activ', true)
+  return data?.map(x => x.companie_id).filter(Boolean) || []
+}
+
+
+
   async function fetchCompanii(u) {
     setLoading(true)
     let companiiData = []
@@ -60,18 +74,19 @@ export default function AdminLocatii() {
     setLoading(false)
   }
 
-  async function fetchLocatii(companieId) {
-    if (!companieId) { setLocatii([]); return }
-    setLoading(true)
-    const { data } = await supabase
-      .from('locatii')
-      .select('*, zone(*)')
-      .eq('companie_id', companieId)
-      .order('nume')
-    setLocatii(data || [])
-    setLoading(false)
-  }
-
+async function fetchLocatii(companieId) {
+  if (!companieId) { setLocatii([]); return }
+  setLoading(true)
+  const id = companieId && companieId !== 'null' ? companieId : null
+  if (!id) { setLocatii([]); setLoading(false); return }
+  const { data } = await supabase
+    .from('locatii')
+    .select('*, zone(*)')
+    .eq('companie_id', id)
+    .order('nume')
+  setLocatii(data || [])
+  setLoading(false)
+}
   async function fetchZone(locatieId) {
     const { data } = await supabase
       .from('zone')
