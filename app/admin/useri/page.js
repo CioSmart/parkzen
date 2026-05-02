@@ -63,12 +63,18 @@ export default function AdminUseri() {
     }
 
     setCompanii(companiiData)
-
-    if (companiiData.length === 1) {
-      setCompanieSelectata(companiiData[0].id)
-      await fetchUseri(companiiData[0].id)
-      await fetchLocatii(companiiData[0].id)
-    }
+if (u.tip !== 'power_admin') {
+  const companieId = u.companie_id && u.companie_id !== 'null' ? u.companie_id : null
+  if (companieId) {
+    setCompanieSelectata(companieId)
+    await fetchUseri(companieId)
+    await fetchLocatii(companieId)
+  }
+} else if (companiiData.length === 1) {
+  setCompanieSelectata(companiiData[0].id)
+  await fetchUseri(companiiData[0].id)
+  await fetchLocatii(companiiData[0].id)
+}
 
     setLoading(false)
   }
