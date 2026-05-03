@@ -41,7 +41,7 @@ export default function AdminLocuri() {
     fetchCompanii(parsed)
   }, [])
 
-  async function fetchCompanii(u) {
+ async function fetchCompanii(u) {
     setLoading(true)
     if (u.tip === 'power_admin') {
       const { data } = await supabase
@@ -50,23 +50,24 @@ export default function AdminLocuri() {
         .eq('activ', true)
         .order('nume')
       setCompanii(data || [])
-    } else {
-      // Admin - fetch companiile lui
-      const { data } = await supabase
-        .from('user_companii')
-        .select('*, companii(*)')
-        .eq('user_id', u.id)
-        .eq('activ', true)
-      const companiiData = data?.map(uc => uc.companii).filter(Boolean) || []
-      setCompanii(companiiData)
+  } else {
+  const { data } = await supabase
+    .from('user_companii')
+    .select('*, companii(*)')
+    .eq('user_id', u.id)
+    .eq('activ', true)
+  const companiiData = data?.map(uc => uc.companii).filter(Boolean) || []
+  setCompanii(companiiData)
 
-      // Daca are o singura companie, selecteaza automat
-      if (companiiData.length === 1) {
-        setFiltruCompanie(companiiData[0].id)
-        setForm(f => ({ ...f, companie_id: companiiData[0].id }))
-        await fetchLocatii(companiiData[0].id)
-      }
-    }
+  if (companiiData.length === 1) {
+    setFiltruCompanie(companiiData[0].id)
+    setForm(f => ({ ...f, companie_id: companiiData[0].id }))
+    await fetchLocatii(companiiData[0].id)
+  } else if (u.companie_id) {
+    // ← NOU: admin cu mai multe companii, dar are companie_id din localStorage
+    await fetchLocatii(u.companie_id)
+  }
+}
     await fetchLocuri(u)
     setLoading(false)
   }
@@ -78,6 +79,7 @@ export default function AdminLocuri() {
       .eq('companie_id', companieId)
       .eq('activ', true)
       .order('nume')
+        console.log('locatii data:', data)
     setLocatii(data || [])
     setZone([])
     setFiltruLocatie('')
@@ -178,15 +180,16 @@ export default function AdminLocuri() {
       if (l.locatie_id) await fetchZone(l.locatie_id)
     } else {
       setEditLoc(null)
+      const companieId = filtruCompanie || user.companie_id  // ← linia lipsea
       setForm({
         numar_loc: '',
         etaj: '0',
         zona_id: '',
         locatie_id: filtruLocatie || '',
-        companie_id: filtruCompanie || '',
+        companie_id: companieId || '',
         descriere: ''
       })
-        if (filtruCompanie) await fetchLocatii(filtruCompanie)
+      if (companieId) await fetchLocatii(companieId)
     }
     setShowForm(true)
     setMsg('')
@@ -280,7 +283,7 @@ export default function AdminLocuri() {
                   if (e.target.value) await fetchLocatii(e.target.value)
                   else { setLocatii([]); setZone([]) }
                 }}
-                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm  text-gray-900  focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Toate companiile</option>
                 {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
               </select>
@@ -291,14 +294,14 @@ export default function AdminLocuri() {
                 if (e.target.value) await fetchZone(e.target.value)
                 else setZone([])
               }}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm  text-gray-900  focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Toate locațiile</option>
               {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
             </select>
             {zone.length > 0 && (
               <select value={filtruZona}
                 onChange={e => setFiltruZona(e.target.value)}
-                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Toate zonele</option>
                 {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
               </select>
