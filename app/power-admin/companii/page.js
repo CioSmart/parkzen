@@ -137,7 +137,7 @@ export default function PowerAdminCompanii() {
                   <input
                     value={form.nume}
                     onChange={e => setForm({ ...form, nume: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: Acme SRL"
                   />
                 </div>
@@ -146,7 +146,7 @@ export default function PowerAdminCompanii() {
                   <input
                     value={form.descriere}
                     onChange={e => setForm({ ...form, descriere: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="descriere opțională"
                   />
                 </div>
