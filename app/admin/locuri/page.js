@@ -321,7 +321,7 @@ export default function AdminLocuri() {
                         setForm({ ...form, companie_id: e.target.value, locatie_id: '', zona_id: '' })
                         if (e.target.value) await fetchLocatii(e.target.value)
                       }}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">— Alege companie —</option>
                       {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
                     </select>
@@ -336,7 +336,7 @@ export default function AdminLocuri() {
                       setForm({ ...form, locatie_id: e.target.value, zona_id: '' })
                       if (e.target.value) await fetchZone(e.target.value)
                     }}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">— Alege locație —</option>
                     {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
                   </select>
@@ -347,7 +347,7 @@ export default function AdminLocuri() {
                   <label className="text-xs text-gray-500 font-medium">Zonă *</label>
                   <select value={form.zona_id}
                     onChange={e => setForm({ ...form, zona_id: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">— Alege zonă —</option>
                     {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
                   </select>
@@ -358,7 +358,7 @@ export default function AdminLocuri() {
                   <label className="text-xs text-gray-500 font-medium">Număr loc *</label>
                   <input value={form.numar_loc}
                     onChange={e => setForm({ ...form, numar_loc: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: A1, P-01" />
                 </div>
 
@@ -367,7 +367,7 @@ export default function AdminLocuri() {
                   <label className="text-xs text-gray-500 font-medium">Etaj</label>
                   <input type="number" value={form.etaj}
                     onChange={e => setForm({ ...form, etaj: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0" />
                 </div>
 
@@ -376,7 +376,7 @@ export default function AdminLocuri() {
                   <label className="text-xs text-gray-500 font-medium">Descriere</label>
                   <input value={form.descriere}
                     onChange={e => setForm({ ...form, descriere: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: lângă lift" />
                 </div>
               </div>

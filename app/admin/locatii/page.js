@@ -318,7 +318,7 @@ async function fetchLocatii(companieId) {
                     <select
                       value={formLocatie.companie_id}
                       onChange={e => setFormLocatie({ ...formLocatie, companie_id: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">— Alege companie —</option>
                       {companii.map(c => (
@@ -333,7 +333,7 @@ async function fetchLocatii(companieId) {
                     <input
                       value={formLocatie.nume}
                       onChange={e => setFormLocatie({ ...formLocatie, nume: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm  text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="ex: Sediu Central"
                     />
                   </div>
@@ -344,7 +344,7 @@ async function fetchLocatii(companieId) {
                     <input
                       value={formLocatie.adresa}
                       onChange={e => setFormLocatie({ ...formLocatie, adresa: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="ex: Str. Exemplu nr. 1"
                     />
                   </div>
@@ -394,14 +394,14 @@ async function fetchLocatii(companieId) {
                   <input
                     value={formZona.nume}
                     onChange={e => setFormZona({ ...formZona, nume: e.target.value.toUpperCase() })}
-                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm  text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Nume zonă (ex: A, VIP)"
                     maxLength={20}
                   />
                   <input
                     value={formZona.descriere}
                     onChange={e => setFormZona({ ...formZona, descriere: e.target.value })}
-                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm  text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="Descriere (opțional)"
                   />
                   <button onClick={adaugaZona}
