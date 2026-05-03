@@ -57,6 +57,7 @@ export default function LoginPage() {
     .select('*, companii(*)')
     .eq('user_id', profile.id)
     .eq('activ', true)
+    .order('nume', { referencedTable: 'companii', ascending: true })
 
   if (companiiError || !userCompanii || userCompanii.length === 0) {
     setError('Nu ești alocat niciunei companii! Contactează administratorul.')
