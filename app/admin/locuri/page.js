@@ -186,6 +186,7 @@ export default function AdminLocuri() {
         companie_id: filtruCompanie || '',
         descriere: ''
       })
+        if (filtruCompanie) await fetchLocatii(filtruCompanie)
     }
     setShowForm(true)
     setMsg('')
