@@ -346,7 +346,7 @@ const { data } = await supabase
                     <label className="text-xs text-gray-500 font-medium">Nume</label>
                     <input value={form.nume}
                       onChange={e => setForm({ ...form, nume: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Nume complet" />
                   </div>
                   <div>
@@ -354,7 +354,7 @@ const { data } = await supabase
                     <input type="email" value={form.email}
                       onChange={e => setForm({ ...form, email: e.target.value })}
                       disabled={!!editUser}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                       placeholder="email@exemplu.com" />
                   </div>
                   {!editUser && (
@@ -362,7 +362,7 @@ const { data } = await supabase
                       <label className="text-xs text-gray-500 font-medium">Parolă *</label>
                       <input type="password" value={form.password}
                         onChange={e => setForm({ ...form, password: e.target.value })}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="••••••••" />
                     </div>
                   )}
@@ -370,7 +370,7 @@ const { data } = await supabase
                     <label className="text-xs text-gray-500 font-medium">Rol în companie</label>
                     <select value={form.tip}
                       onChange={e => setForm({ ...form, tip: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="normal">Normal</option>
                       <option value="admin">Admin</option>
                     </select>
