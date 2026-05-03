@@ -64,9 +64,9 @@ async function getCompanieIds(u) {
     .eq('activ', true)
   return data?.map(x => x.companie_id).filter(Boolean) || []
 }
+ 
 
-
-  async function fetchCompanii(u) {
+async function fetchCompanii(u) {
     setLoading(true)
     if (u.tip === 'power_admin') {
       const { data } = await supabase
@@ -87,6 +87,9 @@ async function getCompanieIds(u) {
         setFiltruCompanie(companiiData[0].id)
         setForm(f => ({ ...f, companie_id: companiiData[0].id }))
         await fetchLocatii(companiiData[0].id)
+      } else if (u.companie_id) {
+        // ← NOU: admin cu mai multe companii
+        await fetchLocatii(u.companie_id)
       }
     }
     await fetchPreturi(u)
@@ -162,13 +165,29 @@ async function getCompanieIds(u) {
         .from('preturi')
         .update(payload)
         .eq('id', editPret.id)
-      if (error) { setMsg('Eroare: ' + error.message); setSaving(false); return }
+   if (error) { 
+  if (error.code === '23505') {
+    setMsg('Eroare: Există deja un tarif pentru această combinație companie/locație/zonă/durată!')
+  } else {
+    setMsg('Eroare: ' + error.message)
+  }
+  setSaving(false)
+  return 
+}
       setMsg('✅ Preț actualizat!')
     } else {
       const { error } = await supabase
         .from('preturi')
         .insert(payload)
-      if (error) { setMsg('Eroare: ' + error.message); setSaving(false); return }
+  if (error) { 
+  if (error.code === '23505') {
+    setMsg('Eroare: Există deja un tarif pentru această combinație companie/locație/zonă/durată!')
+  } else {
+    setMsg('Eroare: ' + error.message)
+  }
+  setSaving(false)
+  return 
+}
       setMsg('✅ Preț adăugat!')
     }
 
@@ -285,7 +304,7 @@ async function getCompanieIds(u) {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-800">💰 Tarife parcare</h2>
             <button onClick={() => deschideForm()}
-              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700">
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm text-gray-900  hover:bg-blue-700">
               + Adaugă
             </button>
           </div>
@@ -301,7 +320,7 @@ async function getCompanieIds(u) {
                   if (e.target.value) await fetchLocatii(e.target.value)
                   else { setLocatii([]); setZone([]) }
                 }}
-                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Toate companiile</option>
                 {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
               </select>
@@ -313,14 +332,14 @@ async function getCompanieIds(u) {
                 if (e.target.value) await fetchZone(e.target.value)
                 else setZone([])
               }}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Toate locațiile</option>
               {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
             </select>
             {zone.length > 0 && (
               <select value={filtruZona}
                 onChange={e => setFiltruZona(e.target.value)}
-                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Toate zonele</option>
                 {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
               </select>
@@ -344,7 +363,7 @@ async function getCompanieIds(u) {
                         setForm({ ...form, companie_id: e.target.value, locatie_id: '', zona_id: '' })
                         if (e.target.value) await fetchLocatii(e.target.value)
                       }}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">— Alege companie —</option>
                       {companii.map(c => <option key={c.id} value={c.id}>{c.nume}</option>)}
                     </select>
@@ -357,7 +376,7 @@ async function getCompanieIds(u) {
                       setForm({ ...form, locatie_id: e.target.value, zona_id: '' })
                       if (e.target.value) await fetchZone(e.target.value)
                     }}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">— Alege locație —</option>
                     {locatii.map(l => <option key={l.id} value={l.id}>{l.nume}</option>)}
                   </select>
@@ -366,7 +385,7 @@ async function getCompanieIds(u) {
                   <label className="text-xs text-gray-500 font-medium">Zonă *</label>
                   <select value={form.zona_id}
                     onChange={e => setForm({ ...form, zona_id: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">— Alege zonă —</option>
                     {zone.map(z => <option key={z.id} value={z.id}>{z.nume}</option>)}
                   </select>
@@ -394,21 +413,21 @@ async function getCompanieIds(u) {
                   <label className="text-xs text-gray-500 font-medium">Nume tarif</label>
                   <input value={form.nume}
                     onChange={e => setForm({ ...form, nume: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900  mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: 1 oră" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Durata (minute) *</label>
                   <input type="number" value={form.durata_minute}
                     onChange={e => setForm({ ...form, durata_minute: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: 60" />
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 font-medium">Preț (RON) *</label>
                   <input type="number" step="0.5" value={form.pret}
                     onChange={e => setForm({ ...form, pret: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="ex: 10.00" />
                 </div>
               </div>
